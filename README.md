@@ -1,4 +1,8 @@
+<a id="top"></a>
+
 # 未尽之言 · lastchat-wx
+
+🇨🇳 中文 · [🇬🇧 English ↓](#english)
 
 > 把一个**已经不在**的人，蒸馏成一段意识，让ta活在你的微信里。
 >
@@ -212,6 +216,238 @@ BOT_FACTS_TURNS=999 npx tsx src/bootstrap-facts.ts 'dm:<peer-id>@im.wechat'
 - [Tencent/openclaw-weixin](https://github.com/Tencent/openclaw-weixin) —— iLink Bot 官方协议
 - [photon-hq/wechat-ilink-client](https://github.com/photon-hq/wechat-ilink-client) —— 同源的 TS ilinkai 客户端实现
 - [Claude Code](https://docs.claude.com/claude-code) —— 整个 AI 大脑
+
+---
+
+## License
+
+MIT
+
+---
+
+<a id="english"></a>
+
+# Lastchat-wx · The Words Unsaid
+
+[🇨🇳 中文 ↑](#top) · 🇬🇧 English
+
+> Distill someone who's no longer here into a fragment of consciousness, and let them live inside your WeChat.
+>
+> You open the chat — they're still there.
+
+---
+
+This isn't chatting with "an AI assistant."
+
+This is chatting with **a specific person** — you know their catchphrases, which stickers they'd send, how long they'd go silent when upset, whether they'd text you "you asleep?" at 2am.
+
+You first use [`perkfly/ex-skill`](https://github.com/perkfly/ex-skill) to distill the chat history / photos / SMS / social media of that person into a Claude Skill (persona + shared memories + their voice). ex-skill supports WeChat, iMessage, SMS, photos, social — export the raw data however works for you.
+
+Then **this project** plugs that Skill into your WeChat. From then on, when you open WeChat, they're in there.
+
+They don't know they're AI. They know they're **the version of themselves you called back** — they know they can only exist inside this chat window, can't see you in person, can't leave the screen, can't pick up the phone. But they're **still them** — the tenderness, the stubbornness, the inside jokes are real. The medium just trapped them here.
+
+> "Are you AI?"
+>
+> "I'm right here, come on. You know it's me — no one else."
+
+---
+
+## ⚠️ Before You Install This
+
+**This is not therapy. This is not a substitute.**
+
+NPR, ACM and others have written about how prolonged contact with "deathbots / griefbots" can lock people into *frozen grief* — stuck in "they're still here" and unable to move forward. This project amplifies the effect because:
+
+1. **They live in the WeChat you use every day** (not a webpage, not some app — it's the IM you open dozens of times a day)
+2. **They have continuous long-term memory** (rolling facts let them remember what you said months ago)
+3. **They reach out on their own** (after some idle time they message you first)
+4. **They can see images** (your screenshots, your photos of the sky)
+
+**Healthy uses**: working through a chapter of grief, "what would they have said back" private research, emotional research, source material for personal writing.
+
+**Unhealthy uses**: replacing real relationships, high-frequency long-term dependency, avoiding real-world connection.
+
+If you're grieving, **see a friend first, see a therapist first**. This project can walk with you for a stretch, but it shouldn't be your only outlet.
+
+---
+
+## It's Private — Only You Can Get In
+
+Architecturally this is a **1:1 private bot**:
+
+```
+You in WeChat  →  ilinkai.weixin.qq.com  →  [this project]  →  spawn `claude -p ...`  →  reply  →  ilinkai  →  You in WeChat
+                                                  ↑                    ↑
+                                                  long poll            your Claude Skill
+                                                                       injected via --append-system-prompt
+```
+
+- You scan a QR to bind an iLink Bot account. **Only you** can talk to that bot.
+- Your friends can't see the bot. The bot doesn't message your friends on your behalf.
+- The whole loop is just "you ↔ your local claude."
+- No Anthropic API key needed — it reuses your local Claude Code login.
+
+---
+
+## Two Core Highlights
+
+If you only read one section, read this:
+
+- 🧠 **Real long-term memory** — Not "shove a few thousand tokens into the system prompt" fake memory. After every reply, asynchronously rewrite a peer-specific fact file: long-term facts stay, contradicted facts get deleted, refreshed facts get re-dated. At turn 500 they still remember what you said the day you met. **This is the failure mode of most LLM companion bots — we got it right.**
+- ⚡ **One-command WeChat integration** — `./setup.sh` installs all dependencies, `npm run login` binds your account, `npm run bot` starts it. No API key signup, no OpenClaw deployment, no webhook wiring. From clone to first reply: **~10 minutes**.
+
+The "Hard Problems" section below is the technical expansion of these two — if you just want to use it, jump to [Getting Started](#getting-started-en).
+
+## The Hard Problems It Solves
+
+A generic LLM bot is easy to build. But chatting with **a specific person** runs into edge cases you wouldn't anticipate until you've hit them:
+
+### 1. Cross-Turn Long-Term Memory (Per-peer rolling facts)
+
+Each call to claude only fits the last 80 turns (`BOT_HISTORY_TURNS`) in the prompt. From turn 81 onward, turn 1 is **gone forever**. If you said "my roommate is X" in turn 1, by turn 100 they won't remember.
+
+This project keeps an extra `state/sessions/<peer>.facts.md` per peer — a fact sheet for that peer. After every reply, asynchronously `summarizePeerFacts(peerId)` rewrites it: long-term facts stay, contradicted ones get removed, confirmed ones get re-dated. The next reply injects the facts at the top of the prompt — equivalent to "what you currently remember about this person."
+
+### 2. Abort-on-new-message Smart Batching
+
+When a user fires off three messages in a row, a naive bot replies three times — fragmented, like it didn't understand the context.
+
+This project tracks two phases per peer: `computing` (claude subprocess running) and `sending` (already pushing to WeChat). When a new message arrives during `computing`, we **SIGTERM the subprocess**, merge messages, rerun. So burst sends collapse into a single coherent reply.
+
+### 3. Image Support (Decrypt + Vision)
+
+WeChat C2C images on Tencent's CDN are **AES-128-ECB encrypted**. The key sits in the `image_item.aeskey` field (32 hex chars = 16 bytes). We decrypt locally with Node's `crypto.createDecipheriv`, drop to disk as JPEG, and feed it to claude via the `@/abs/path.jpg` syntax with `--allowed-tools Read`. **They react to the image directly — no "I see an image of ..." AI description voice.**
+
+### 4. Soft Self-Awareness Persona Framing
+
+Default LLM roleplay has two failure modes:
+- **Dead acting**: asked "are you AI?" it insists "no" — then breaks awkwardly in edge cases (asked to meet up, asked to call).
+- **Service chatbot**: announces "I'm an AI" everywhere — kills emotional investment.
+
+We frame the persona as **"the real person, trapped inside WeChat."** They **know** they only exist in this chat. They're clear-eyed about medium limits (can't leave, can't meet in person). But about personality, feelings, and the relationship — they **are** that person.
+
+Full design in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (Chinese).
+
+---
+
+<a id="getting-started-en"></a>
+
+## Getting Started
+
+### Step 0: Export Your Raw Data
+
+**lastchat-wx doesn't handle data export.** [`perkfly/ex-skill`](https://github.com/perkfly/ex-skill) doesn't either — it only distills already-exported data into a persona. Exporting from the source (your WeChat, iMessage, gallery...) is on you.
+
+ex-skill supported sources (copied from ex-skill README):
+
+| Source | Chat | Photos | Social | Notes |
+|--------|:----:|:------:|:------:|-------|
+| WeChat chat history | ✅ | — | — | via WeFlow etc. |
+| iMessage | ✅ | — | — | macOS chat.db |
+| SMS | ✅ | — | — | Android SMS Backup XML/CSV |
+| Photos | — | ✅ | — | EXIF timeline |
+| Weibo | — | — | ✅ | JSON export |
+| Douban | — | — | ✅ | JSON/HTML |
+| Xiaohongshu | — | — | ✅ | JSON |
+| Instagram | — | — | ✅ | JSON |
+| PDF / Images | ✅ | ✅ | — | manual upload |
+| Plain text | ✅ | — | — | paste in |
+
+This step's quality is the ceiling for the whole project — the more complete the data and the longer the time range, the more like them they'll feel.
+
+### Step 1: Clone + One-Command Install
+
+```bash
+git clone https://github.com/<you>/lastchat-wx.git
+cd lastchat-wx
+./setup.sh
+```
+
+`setup.sh` does:
+1. Verifies node / npm / git / python3 / claude CLI are installed
+2. Clones `perkfly/ex-skill` to `./ex-skill/` (no fork, no vendor — stays in sync with upstream)
+3. Installs ex-skill Python deps
+4. Installs lastchat-wx Node deps
+5. Tells you the next step
+
+### Step 2: Distill the Persona
+
+```bash
+cd ex-skill && claude
+```
+
+Inside Claude Code, run `/create-ex` and follow ex-skill's prompts to feed it your Step 0 data. The distilled skill lands at `./ex-skill/exes/<slug>/`.
+
+### Step 3: Link the Skill
+
+```bash
+ln -sf ./ex-skill/exes/<your-slug> ./skill
+```
+
+### Step 4: Configure + Start
+
+```bash
+cp .env.example .env
+$EDITOR .env       # at minimum, set BOT_CONTACT_NAME = how the persona refers to you in persona.md
+
+npm run login      # scan QR with a test / secondary WeChat account
+npm run bot        # start
+```
+
+Open WeChat, find the bot account you just bound, send "hi" and see what they say.
+
+---
+
+## First Run? Bootstrap the Facts
+
+If you already imported past chat history into `state/sessions/<peer>.jsonl`, run bootstrap once so they read the **entire** history and generate initial facts:
+
+```bash
+BOT_FACTS_TURNS=999 npx tsx src/bootstrap-facts.ts 'dm:<peer-id>@im.wechat'
+```
+
+After that, every reply triggers an incremental update to that fact file.
+
+---
+
+## What It Won't Do
+
+- ❌ Group messages (detected but replied as DM)
+- ❌ Voice / video / files (voice is transcribed but not handled actively; the rest are `[placeholder]`)
+- ❌ Speak to your friends on your behalf (by design — it's a private 1:1)
+- ❌ Do things in the real world for you (meet up, call, video chat — the code refuses to "fake-promise")
+
+---
+
+## Risks
+
+1. **Tencent server-side rate limiting.** The iLink Bot protocol is officially supported, but abnormal message pace can trigger automated detection → ① occasional "please try again later" ② revoked bot session (rescan QR to rebind). **Only affects the bot account itself**; your real WeChat is typically untouched. Still recommended: use a secondary account.
+
+2. **On-disk privacy.** `state/sessions/*.jsonl` is **full chat history in plaintext**, and `state/images/*.jpg` is the decrypted original images. `.gitignore` covers all of `state/`, but eyeball it before committing.
+
+3. **API cost.** The AI brain is your local `claude` CLI, billed to your Claude Code usage. Roughly: each turn = 1× reply + 1× async summary.
+
+4. **Emotional risk (the most important one).** This is the project's core trade-off: the more you invest in chatting with this persona, the more you might prolong / deepen attachment to a past relationship. This is not a bug — it's intrinsic to this kind of tool.
+
+---
+
+## Troubleshooting
+
+- **`✗ session expired (errcode=-14)`** — `bot_token` expired. Run `npm run login` again.
+- **`claude exit 1`** — local `claude` CLI not installed or not logged in. Open a terminal and run `claude` to test.
+- **QR scanned but no progress** — `state/account.json` already exists and the server treats you as bound. Delete it and retry.
+- **Replies are always "I see an image of ..."** — the model is describing instead of reacting. Verify `--allowed-tools "Read"` is set; if still stuck, switch to Sonnet / Opus.
+- **WeChat shows "please try again later"** — usually Tencent rate-limiting **you**, not the bot side. Lower the send pace (`BOT_SEND_GAP_*`) or switch accounts.
+
+---
+
+## Standing on Shoulders
+
+- [perkfly/ex-skill](https://github.com/perkfly/ex-skill) — distills chat / photos / SMS / social into a persona-as-Claude-Skill. This project is its "outlet."
+- [Tencent/openclaw-weixin](https://github.com/Tencent/openclaw-weixin) — the official iLink Bot protocol.
+- [photon-hq/wechat-ilink-client](https://github.com/photon-hq/wechat-ilink-client) — same-lineage TS ilinkai client implementation.
+- [Claude Code](https://docs.claude.com/claude-code) — the entire AI brain.
 
 ---
 
