@@ -1,0 +1,19 @@
+{
+  "name": "lastchat-wx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bridge a Claude Skill (e.g. an ex / friend / loved-one persona) to your personal WeChat via Tencent's official iLink Bot API. No Anthropic API key needed — drives your local `claude` CLI as a subprocess.",
+  "scripts": {
+    "login": "tsx src/login.ts",
+    "bot": "caffeinate -i tsx src/main.ts"
+  },
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

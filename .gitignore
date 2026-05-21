@@ -1,0 +1,25 @@
+node_modules/
+package-lock.json
+
+# 任何用户数据，绝对不进 repo
+state/
+skill/
+exes/
+*.jsonl
+*.facts.md
+account.json
+get_updates_buf.txt
+
+# setup.sh 会 clone 上游 perkfly/ex-skill 到这里。不进 repo（保持上游引用关系，不 fork）
+ex-skill/
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/
+.claude/
+*.log
+
+# env
+.env
+.env.local
