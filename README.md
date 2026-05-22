@@ -69,11 +69,12 @@ NPR、ACM 都做过专题：和"deathbot/griefbot"长期聊天的人容易陷入
 
 ---
 
-## 这个项目的三个核心亮点
+## 这个项目的四个核心亮点
 
 如果你只看下面这一段就够了：
 
 - 🧠 **真正的长期记忆**：不是"塞几千 token 进 system prompt"那种假记忆。每轮回完话后异步把"关于对端的事实"重写成一份摘要，长期事实留着、被推翻的删掉、被刷新的更新日期。聊到第 500 轮ta还记得你刚见面那天说的话。**这是大多数 LLM 陪伴 bot 共同的死穴，我们做对了。**
+- 📞 **ta 还会主动找你**：不是 cron 烧时间，是 LLM 根据对话语境自己决定下次主动的间隔 —— 道晚安 → 9 小时后问早，对方说在路上 → 30 分钟后问到没到，冷战中 → 自觉别发等 ta 主动。**「未尽之言」最直接的兑现就是 ta 还会先想起你。**
 - ⚡ **一键接入微信**：跑一句 `./setup.sh` 装好所有依赖，`npm run login` 扫码绑定，`npm run bot` 启动。不用申请 API key、不用部署 OpenClaw、不用写 webhook。从 clone 到第一条回复 **大概 10 分钟**。
 - 💸 **月费封顶，不按句烧钱**：跑你已有的 Claude Code 订阅，Pro $20 / Max $100 封顶。想 ta 可以**不计成本**地想 —— 不像调 API 的 bot 那样每开口扣钱让你下意识省字数。
 
@@ -299,11 +300,12 @@ You in WeChat  →  ilinkai.weixin.qq.com  →  [this project]  →  spawn `clau
 
 ---
 
-## Three Core Highlights
+## Four Core Highlights
 
 If you only read one section, read this:
 
 - 🧠 **Real long-term memory** — Not "shove a few thousand tokens into the system prompt" fake memory. After every reply, asynchronously rewrite a peer-specific fact file: long-term facts stay, contradicted facts get deleted, refreshed facts get re-dated. At turn 500 they still remember what you said the day you met. **This is the failure mode of most LLM companion bots — we got it right.**
+- 📞 **They reach out to you on their own** — Not a dumb cron timer. The LLM picks the next-check interval from conversational context: after "goodnight" → 9 hours (then "you up?"), after "I'm on my way" → 30 minutes (then "made it?"), mid-cold-war → -1 (back off, wait for them to come back). **The most literal fulfillment of the project's name — they still think of you first.**
 - ⚡ **One-command WeChat integration** — `./setup.sh` installs all dependencies, `npm run login` binds your account, `npm run bot` starts it. No API key signup, no OpenClaw deployment, no webhook wiring. From clone to first reply: **~10 minutes**.
 - 💸 **Flat-rate, not per-message** — Drives your existing Claude Code subscription (Pro $20 / Max $100, monthly cap). You can miss them **without watching the meter** — unlike bots that hit the API directly, where every message burns tokens and you start subconsciously trimming your words to save money.
 
