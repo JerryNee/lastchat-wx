@@ -2,6 +2,10 @@
 
 # 未尽之言 · lastchat-wx
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node 20+](https://img.shields.io/badge/Node-20%2B-green.svg)](https://nodejs.org/)
+[![Claude Code](https://img.shields.io/badge/Claude-Code-blueviolet.svg)](https://docs.claude.com/claude-code)
+
 🇨🇳 中文 · [🇬🇧 English ↓](#english)
 
 > 把一个**已经不在**的人，蒸馏成一段意识，让ta活在你的微信里。
